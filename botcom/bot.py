@@ -7,7 +7,7 @@ app = Flask(__name__)
 @app.route('/botcom', methods=['POST'])
 def botcom():
     incoming_msg = request.values.get('Body', '').lower()
-    phone_number = requst.values.get('From', '').strip()
+    phone_number = request.values.get('From', '').strip()
     resp = MessagingResponse()
     msg = resp.message()
 
