@@ -9,6 +9,7 @@ app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
 app.config['MYSQL_DB'] = 'eshop'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
@@ -20,17 +21,18 @@ def botcom():
     msg = resp.message()
 
     if 'hello' in incoming_msg or 'hi' in incoming_msg:
-        msg.body("hello, how my I help you today?")
-    if 'browse products' in incoming_msg or 'show goods' in incoming_msg:
+        msg.body("Hello, How may I help you Today?")
+    elif 'browse products' in incoming_msg or 'show me products' in incoming_msg:
         cursor = mysql.connection.cursor()
 
-        cursor.execute("SELECT * FROM product WHERE quantity_available > 0")
+        cursor.execute("SELECT product_name, price FROM product WHERE quantity_available > 0")
         products = cursor.fetchall()
         if products:
-            product_list = "Here are availlable products:\n"
+            product_list = ('Here are availlable products:\n')
+            product_list += ('Name\t\t\t\tPrice\n')
             for prod in products:
-                product_list += f"Name: {prod[0]}, About: {prod[1]}, Price: ${prod[2]}, Quantity: {prod[3]}" 
-                msg.body(product_list)
+                product_list += f'{prod["product_name"]}\t\t\t${prod["price"]}\n' 
+            msg.body(product_list)
         else:
             msg.body("There are no availlable products at the moment")
     else:
