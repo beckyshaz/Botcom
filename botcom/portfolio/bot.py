@@ -1,7 +1,7 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 from flask_mysqldb import MySQL
-from portfolio import database.py
+from portfolio import database.py, product.py, cart.py
 
 app = Flask(__name__)
 
@@ -48,6 +48,10 @@ def botcom():
                 quantity = product_quantity[1]
                 if isdigit(quantity):
                     quantity = int(quantity)
+                product = search_product(product_name)
+                if product:
+
+
                 else:
                     msg.body('Provide a number for quantity of products You want')
             else:
