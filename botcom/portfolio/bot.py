@@ -1,7 +1,7 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 from flask_mysqldb import MySQL
-from portfolio import database.py, product.py, cart.py
+from portfolio import database, product, cart
 
 app = Flask(__name__)
 
@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'eshop'
+app.config['MYSQL_DB'] = 'eshops'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
@@ -22,7 +22,7 @@ def botcom():
 
     if 'hello' in incoming_msg.lower() or 'hi' in incoming_msg.lower():
         msg.body("Hello, How may I help you Today?")
-    elif 'browse products' in incoming_msg.lower() or 'show me products' in incoming_msg.lower():
+    elif 'browse products' in incoming_msg.lower() or 'show me available products' in incoming_msg.lower():
         cursor = mysql.connection.cursor()
 
         cursor.execute("SELECT product_name, price FROM product WHERE quantity_available > 0")
@@ -39,23 +39,42 @@ def botcom():
     elif 'add items to cart' in incoming_msg.lower():
         phone_number = request.values.get('From', '').strip()
         user = database.search_user(phone_number)
-        name = f'{user["name"]}'
         if user:
-            msg.body(name 'Welcome back, Please provide name of product and quantity, e.g, smartphoneA 2')
+            message = f'Welcome back {user["name"],}\n'
+            message += 'Please provide name of product and quantity, e.g, "smartphoneA 2"'
+            msg.body(message)
             product_quantity = incoming_msg.lower().split()
-            if len product_quantity == 2:
-                product_name = product_quantity[0]
+            if len(product_quantity) == 2:
                 quantity = product_quantity[1]
                 if isdigit(quantity):
                     quantity = int(quantity)
+                else:
+                    msg.body("Please, provide a digit as the quantity of products You want")
+                product_name = product_quantity[0]
                 product = search_product(product_name)
                 if product:
-
-
+                    user_id = user["user_id"]
+                    add_product_to_cart(user_id, product['id'], quantity)
+                    msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
                 else:
-                    msg.body('Provide a number for quantity of products You want')
+                    msg.body('Sorry, The product you requested is not available at the moment')
             else:
                 msg.body('Please, provide product name and quantity, e.g., "smartphoneA 2"')
+        else:
+            message = 'I don’t have your details yet. Please provide your name and email.'
+            message += 'provide first_name, second_name and email e.g'
+            message += 'Walle Walter walewalter@qmail.com'
+            msg.body(message)
+            user_details = incoming_msg.split()
+            if len(user_details) == 2:
+                first_name = user_details[0]
+                second_name = user_details[1]
+                email = user_details[2]
+                user_id = create_user(first_name, second_name, email, phone_number)
+                add_product_to_cart(user_id, product['id'], quantity)
+                msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
+            else:
+                msg.body('Please, provide first_name, second_name and email')
     else:
         msg.body("Sorry, I did not understand that")
 

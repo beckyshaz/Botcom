@@ -23,11 +23,11 @@ if __name__ == "__main__":
             # Use the existing cart ID
             cart_id = cart[0]
 
-         # Now insert the product into the cartitem table
-         query_insert_cartitem = """
-         INSERT INTO cartitem (cart_id, product_id, quantity)
-         VALUES (%s, %s, %s)
-         """
-         cursor.execute(query_insert_cartitem, (cart_id, product_id, quantity))
-         mysql.connection.commit()
-         cursor.close()
+            #Insert the product into the cartitem table
+            query_insert_cartitem = """
+            INSERT INTO cartitem (cart_id, product_id, quantity)
+            VALUES (%s, %s, %s)
+            """
+            cursor.execute(query_insert_cartitem, (cart_id, product_id, quantity))
+            mysql.connection.commit()
+            cursor.close()
