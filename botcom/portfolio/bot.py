@@ -1,9 +1,13 @@
-from flask import Flask, request
+from flask import Flask, request, session
+import secrets
 from twilio.twiml.messaging_response import MessagingResponse
 from flask_mysqldb import MySQL
 from portfolio import database, product, cart
 
 app = Flask(__name__)
+
+
+app.secret_key = secrets.token_hex(16)
 
 
 app.config['MYSQL_HOST'] = 'localhost'
@@ -54,25 +58,31 @@ def botcom():
                 product = search_product(product_name)
                 if product:
                     user_id = user["user_id"]
-                    add_product_to_cart(user_id, product['id'], quantity)
+                    add_product_to_cart(user_id, product['product_id'], quantity)
                     msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
                 else:
                     msg.body('Sorry, The product you requested is not available at the moment')
             else:
                 msg.body('Please, provide product name and quantity, e.g., "smartphoneA 2"')
         else:
-            message = 'I don’t have your details yet. Please provide your name and email.'
-            message += 'provide first_name, second_name and email e.g'
-            message += 'Walle Walter walewalter@qmail.com'
+            message = 'I don’t have your details yet.\n Please provide your name and email.\n'
+            message += 'First_name, second_name, email e.g\n'
+            message += 'Walle, Walter, walewalter@gmail.com'
             msg.body(message)
-            user_details = incoming_msg.split()
-            if len(user_details) == 2:
-                first_name = user_details[0]
-                second_name = user_details[1]
-                email = user_details[2]
-                user_id = create_user(first_name, second_name, email, phone_number)
-                add_product_to_cart(user_id, product['id'], quantity)
-                msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
+            session['awaiting_details'] = True
+            if session.get('awaiting_details'):
+                user_details = incoming_msg.lower().split(',')
+                if len(user_details) == 2:
+                    first_name = user_details[0].strip()
+                    second_name = user_details[1].strip()
+                    email = user_details[2].strip()
+                    user_id = create_user(first_name, second_name, email, phone_number)
+                    msg = 'Thank you, your details have been added successfully\n'
+                    msg += 'Now Please, provide the name of product and quantity to add to cart\n'
+                    msg += 'Provide product name and quantity, e.g., "smartphoneA 2"\n'
+                    msg.body(msg)
+                    add_product_to_cart(user_id, product['product_id'], quantity)
+                    msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
             else:
                 msg.body('Please, provide first_name, second_name and email')
     else:
