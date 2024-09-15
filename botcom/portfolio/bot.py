@@ -70,21 +70,21 @@ def botcom():
             message += 'Walle, Walter, walewalter@gmail.com'
             msg.body(message)
             session['awaiting_details'] = True
-            if session.get('awaiting_details'):
-                user_details = incoming_msg.lower().split(',')
-                if len(user_details) == 2:
-                    first_name = user_details[0].strip()
-                    second_name = user_details[1].strip()
-                    email = user_details[2].strip()
-                    user_id = create_user(first_name, second_name, email, phone_number)
-                    msg = 'Thank you, your details have been added successfully\n'
-                    msg += 'Now Please, provide the name of product and quantity to add to cart\n'
-                    msg += 'Provide product name and quantity, e.g., "smartphoneA 2"\n'
-                    msg.body(msg)
-                    add_product_to_cart(user_id, product['product_id'], quantity)
-                    msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
-            else:
-                msg.body('Please, provide first_name, second_name and email')
+    elif session.get('awaiting_details'):
+        user_details = incoming_msg.lower().split(',')
+        if len(user_details) == 3:
+            first_name = user_details[0].strip()
+            second_name = user_details[1].strip()
+            email = user_details[2].strip()
+            user_id = create_user(first_name, second_name, email, phone_number)
+            msg = 'Thank you, your details have been added successfully\n'
+            msg += 'Now Please, provide the name of product and quantity to add to cart\n'
+            msg += 'Provide product name and quantity, e.g., "smartphoneA 2"\n'
+            msg.body(msg)
+            add_product_to_cart(user_id, product['product_id'], quantity)
+            msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
+        else:
+            msg.body('Please, provide first_name, second_name and email')
     else:
         msg.body("Sorry, I did not understand that")
 
