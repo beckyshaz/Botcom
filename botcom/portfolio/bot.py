@@ -2,7 +2,6 @@ from flask import Flask, request, session
 import secrets
 from twilio.twiml.messaging_response import MessagingResponse
 from flask_mysqldb import MySQL
-from portfolio import database, product, cart
 
 app = Flask(__name__)
 
@@ -20,6 +19,8 @@ mysql = MySQL(app)
 
 @app.route('/botcom', methods=['POST'])
 def botcom():
+    from portfolio import database, product, cart
+
     incoming_msg = request.values.get('Body', '').lower()
     resp = MessagingResponse()
     msg = resp.message()
@@ -44,26 +45,15 @@ def botcom():
         phone_number = request.values.get('From', '').strip()
         user = database.search_user(phone_number)
         if user:
-            message = f'Welcome back {user["name"],}\n'
+            session.pop('awaiting_details', None)
+            user_id = user.get('user_id')
+            name = f"{user.get('first_name', '')} {user.get('second_name', '')}" # Provide a default value if name is not found
+            email = user.get('email', 'not provided')
+            message = f'Hi, {name}\n'
             message += 'Please provide name of product and quantity, e.g, "smartphoneA 2"'
             msg.body(message)
-            product_quantity = incoming_msg.lower().split()
-            if len(product_quantity) == 2:
-                quantity = product_quantity[1]
-                if isdigit(quantity):
-                    quantity = int(quantity)
-                else:
-                    msg.body("Please, provide a digit as the quantity of products You want")
-                product_name = product_quantity[0]
-                product = search_product(product_name)
-                if product:
-                    user_id = user["user_id"]
-                    add_product_to_cart(user_id, product['product_id'], quantity)
-                    msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
-                else:
-                    msg.body('Sorry, The product you requested is not available at the moment')
-            else:
-                msg.body('Please, provide product name and quantity, e.g., "smartphoneA 2"')
+            session['awaiting_product'] = True
+
         else:
             message = 'I don’t have your details yet.\n Please provide your name and email.\n'
             message += 'First_name, second_name, email e.g\n'
@@ -76,15 +66,39 @@ def botcom():
             first_name = user_details[0].strip()
             second_name = user_details[1].strip()
             email = user_details[2].strip()
-            user_id = create_user(first_name, second_name, email, phone_number)
-            msg = 'Thank you, your details have been added successfully\n'
-            msg += 'Now Please, provide the name of product and quantity to add to cart\n'
-            msg += 'Provide product name and quantity, e.g., "smartphoneA 2"\n'
-            msg.body(msg)
-            add_product_to_cart(user_id, product['product_id'], quantity)
-            msg.body(f'{quantity} {product["product_name"]}(s) have been added to your cart.')
+            phone_number = request.values.get('From', '').strip()
+            user_id = database.create_user(first_name, second_name, email, phone_number)
+            message = 'Thank you, your details have been added successfully\n'
+            message += 'Now Please, provide the name of product and quantity to add to cart\n'
+            message += 'Provide product name and quantity, e.g., "smartphoneA 2"\n'
+            msg.body(message)
+            session.pop('awaiting_details', None) 
+            session['awaiting_product'] = True 
         else:
             msg.body('Please, provide first_name, second_name and email')
+    elif session.get('awaiting_product'):
+        # Handle product and quantity input
+        product_quantity = incoming_msg.split()
+        if len(product_quantity) == 2 and product_quantity[1].isdigit():
+            product_name = product_quantity[0]
+            quantity = product_quantity[1]
+            product_data = product.search_product(product_name)
+            if product_data:
+                phone_number = request.values.get('From', '').strip()
+                user = database.search_user(phone_number)
+                if user:
+                    user_id = user['user_id']
+                    cart.add_product_to_cart(user_id, product_data['product_id'], quantity)
+                    msg.body(f'{quantity} {product_data["product_name"]}(s) have been added to your cart.')
+                    session.pop('awaiting_product', None)  # Clear the session for product input
+                else:
+                    msg.body("User details are missing. Please add your details first.")
+            else:
+                msg.body('Sorry, the product you requested is not available at the moment.')
+        else:
+            msg.body('Please provide the product name and quantity in the format "product_name quantity".')
+
+
     else:
         msg.body("Sorry, I did not understand that")
 

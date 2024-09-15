@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
-if __name__ == "__main__":
-    """quering database to check if the product requested by the
-    user exists"""
+"""quering database to check if the product requested by the
+user exists"""
 
-    def search_product(product_name):
-        cursor = mysql.connection.cursor()
+from portfolio.bot import mysql
 
-        query = "SELECT product_id, product_name, price, quantity_available FROM product WHERE name LIKE %s LIMIT 1"
-        cursor.execute(query, (product_name))
+def search_product(product_name):
+    cursor = mysql.connection.cursor()
 
-        # Fetch the first matching product
-        product = cursor.fetchone()
-        cursor.close()
+    query = "SELECT product_id, product_name, price, quantity_available FROM product WHERE product_name LIKE %s LIMIT 1"
 
-        if product:
-            return {
-                    'product_id': product[0],
-                    'product_name': product[1],
-                    'price': product[2],
-                    'quantity_available': product[3]
-                    }
-        else:
-            return None
+    cursor.execute(query, (product_name,))
+
+    # Fetch the first matching product
+    product_data = cursor.fetchone()
+    cursor.close()
+    print(product_data)
+
+    if product_data:
+        return {
+                'product_id': product_data['product_id'],
+                'product_name': product_data['product_name'],
+                'price': product_data['price'],
+                'stock': product_data['quantity_available']
+                }
+    else:
+        return None
