@@ -17,11 +17,11 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
-@app.route('/botcom', methods=['POST'])
+@app.route('/botcom', methods=['POST']) # webhook that receives messages from twilio
 def botcom():
     from portfolio import database, product, cart
 
-    incoming_msg = request.values.get('Body', '').lower()
+    incoming_msg = request.values.get('Body', '').lower() # processing message received from twilio
     resp = MessagingResponse()
     msg = resp.message()
 
@@ -31,28 +31,28 @@ def botcom():
         cursor = mysql.connection.cursor()
 
         cursor.execute("SELECT product_name, price FROM product WHERE quantity_available > 0")
-        products = cursor.fetchall()
+        products = cursor.fetchall() # fetching the available products from the database
         if products:
             product_list = ('Here are availlable products:\n')
             product_list += ('Name\t\t\t\tPrice\n')
             for prod in products:
                 product_list += f'{prod["product_name"]}\t\t\t${prod["price"]}\n'
-            msg.body(product_list)
+            msg.body(product_list) # printing the fetched message to the user
         else:
             msg.body("There are no availlable products at the moment")
 
     elif 'add items to cart' in incoming_msg.lower():
         phone_number = request.values.get('From', '').strip()
-        user = database.search_user(phone_number)
+        user = database.search_user(phone_number) # searching if user already exits on database by phone
         if user:
-            session.pop('awaiting_details', None)
+            session.pop('awaiting_details', None) # if user exits, end session dont prompt for user detail
             user_id = user.get('user_id')
-            name = f"{user.get('first_name', '')} {user.get('second_name', '')}" # Provide a default value if name is not found
+            name = f"{user.get('first_name', '')} {user.get('second_name', '')}"
             email = user.get('email', 'not provided')
             message = f'Hi, {name}\n'
             message += 'Please provide name of product and quantity, e.g, "smartphoneA 2"'
             msg.body(message)
-            session['awaiting_product'] = True
+            session['awaiting_product'] = True # creating a session to wait for user to enter product data
 
         else:
             message = 'I don’t have your details yet.\n Please provide your name and email.\n'
@@ -61,7 +61,7 @@ def botcom():
             msg.body(message)
             session['awaiting_details'] = True
     elif session.get('awaiting_details'):
-        user_details = incoming_msg.lower().split(',')
+        user_details = incoming_msg.lower().split(',') # getting user details
         if len(user_details) == 3:
             first_name = user_details[0].strip()
             second_name = user_details[1].strip()
@@ -82,13 +82,13 @@ def botcom():
         if len(product_quantity) == 2 and product_quantity[1].isdigit():
             product_name = product_quantity[0]
             quantity = product_quantity[1]
-            product_data = product.search_product(product_name)
+            product_data = product.search_product(product_name) # searching if product is availlable
             if product_data:
                 phone_number = request.values.get('From', '').strip()
                 user = database.search_user(phone_number)
                 if user:
                     user_id = user['user_id']
-                    cart.add_product_to_cart(user_id, product_data['product_id'], quantity)
+                    cart.add_product_to_cart(user_id, product_data['product_id'], quantity) 
                     msg.body(f'{quantity} {product_data["product_name"]}(s) have been added to your cart.')
                     session.pop('awaiting_product', None)  # Clear the session for product input
                 else:
